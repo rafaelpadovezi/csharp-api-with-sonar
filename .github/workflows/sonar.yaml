@@ -1,0 +1,69 @@
+name: Sonar
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+jobs:
+  sonar:
+    name: Analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+      - name: 'Download code coverage'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+            const artifactName = "pr";
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            let matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == artifactName
+            })[0];
+            let download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            let fs = require('fs');
+            fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/{artifactName}.zip`, Buffer.from(download.data));
+      - run: unzip pr.zip -d tests-reports/
+
+      - name: Install dotnet-sonarscanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+
+      - name: Build the project and publish to SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          PROJECT_VERSION: ${{ github.event.workflow_run.head_sha }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          BASE_BRANCH: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
+          PULL_REQUEST_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          set -eu -o pipefail
+
+          dotnet sonarscanner begin \
+              /k:"rafaelpadovezi_csharp-api-with-sonar" \
+              /o:"rafaelpadovezi" \
+              /d:sonar.login="$SONAR_TOKEN" \
+              /v:"$PROJECT_VERSION" \
+              /d:sonar.host.url="https://sonarcloud.io" \
+              /d:sonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml" \
+              /d:sonar.cs.vstest.reportsPaths="**/*/*.trx" \
+              /d:sonar.pullrequest.base="$BASE_BRANCH" \
+              /d:sonar.pullrequest.branch="$BRANCH" \
+              /d:sonar.pullrequest.key="$PULL_REQUEST_NUMBER"
+
+          dotnet build
+
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"

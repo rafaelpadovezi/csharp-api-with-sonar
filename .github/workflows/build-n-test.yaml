@@ -1,0 +1,45 @@
+name: Build and Test (main)
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    name: Run tests and generate coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install dotnet-sonarscanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+
+      - name: Build the project and publish to SonarCloud
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          PROJECT_VERSION: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -eu -o pipefail
+
+          dotnet sonarscanner begin \
+              /k:"rafaelpadovezi_csharp-api-with-sonar" \
+              /o:"rafaelpadovezi" \
+              /d:sonar.login="$SONAR_TOKEN" \
+              /v:"$PROJECT_VERSION" \
+              /d:sonar.host.url="https://sonarcloud.io" \
+              /d:sonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml" \
+              /d:sonar.cs.vstest.reportsPaths="**/*/*.trx" \
+              /d:sonar.branch.name="$BRANCH"
+
+          dotnet build
+
+          dotnet test \
+            --logger trx \
+            --logger "console;verbosity=detailed" \
+            --settings "runsettings.xml" \
+            --results-directory tests-reports
+
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"

@@ -29,7 +29,7 @@ jobs:
         run: |
           echo "PR_NUMBER=${{ github.event.number }}" >> ./pr/pr.env
           echo "PR_BASE_REF=${{ github.base_ref }}"   >> ./pr/pr.env
-          echo "PR_HEAD_REF=bolinha"   >> ./pr/pr.env
+          echo "PR_HEAD_REF=${{ github.head_ref }}"   >> ./pr/pr.env
       - uses: actions/upload-artifact@v2
         with:
           name: pr

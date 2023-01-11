@@ -7,16 +7,15 @@ jobs:
   sonar:
     name: Analyze
     runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v3
         with:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
           ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJSON(github) }}
-        run: echo "$GITHUB_CONTEXT"
       - name: 'Download code coverage'
         uses: actions/github-script@v6
         with:
@@ -39,7 +38,10 @@ jobs:
             });
             let fs = require('fs');
             fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifactName}.zip`, Buffer.from(download.data));
-      - run: unzip pr.zip -d tests-reports/
+      - name: Unzip artefacts and restore env
+        run: |
+          unzip pr.zip -d tests-reports/
+          cat pr.env >> "${GITHUB_ENV}"
 
       - name: Install dotnet-sonarscanner
         run: |
@@ -50,9 +52,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PROJECT_VERSION: ${{ github.event.workflow_run.head_sha }}
-          BRANCH: ${{ github.event.workflow_run.head_branch }}
-          BASE_BRANCH: ${{ github.event.workflow_run.pull_requests[0].base.ref }}
-          PULL_REQUEST_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          BRANCH: ${{ env.PR_HEAD_REF }}
+          BASE_BRANCH: ${{ env.PR_BASE_REF }}
+          PULL_REQUEST_NUMBER: ${{ env.PR_NUMBER }}
         run: |
           set -eu -o pipefail
 

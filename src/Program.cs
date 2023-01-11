@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 var x = 1;
-
+var y = "";
 // Add services to the container.
 
 builder.Services.AddControllers();

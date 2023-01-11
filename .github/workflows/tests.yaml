@@ -23,9 +23,9 @@ jobs:
             --results-directory pr
       - name: Save PR information
         run: |
-          echo "PR_NUMBER=${{ github.event.number }}" >> pr.env
-          echo "PR_BASE_REF=${{ github.base_ref }}"   >> pr.env
-          echo "PR_HEAD_REF=${{ github.head_ref }}"   >> pr.env
+          echo "PR_NUMBER=${{ github.event.number }}" >> ./pr/pr.env
+          echo "PR_BASE_REF=${{ github.base_ref }}"   >> ./pr/pr.env
+          echo "PR_HEAD_REF=${{ github.head_ref }}"   >> ./pr/pr.env
       - uses: actions/upload-artifact@v2
         with:
           name: pr

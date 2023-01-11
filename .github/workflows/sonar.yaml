@@ -41,7 +41,7 @@ jobs:
       - name: Unzip artefacts and restore env
         run: |
           unzip pr.zip -d tests-reports/
-          cat pr.env >> "${GITHUB_ENV}"
+          cat tests-reports/pr.env >> "${GITHUB_ENV}"
 
       - name: Install dotnet-sonarscanner
         run: |

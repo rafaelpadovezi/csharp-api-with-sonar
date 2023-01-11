@@ -62,6 +62,7 @@ jobs:
               /k:"rafaelpadovezi_csharp-api-with-sonar" \
               /o:"rafaelpadovezi" \
               /d:sonar.login="$SONAR_TOKEN" \
+              /v="$PROJECT_VERSION" \
               /d:sonar.scm.revision="$PROJECT_VERSION" \
               /d:sonar.host.url="https://sonarcloud.io" \
               /d:sonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml" \

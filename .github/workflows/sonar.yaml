@@ -11,12 +11,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: ${{ github.event.workflow_run.head_repository.full_name }}
-          ref: ${{ github.event.workflow_run.head_branch }}
-          fetch-depth: 0
-      - name: 'Download code coverage'
+      - name: 'Download artifacts'
         uses: actions/github-script@v6
         with:
           script: |
@@ -43,33 +38,18 @@ jobs:
           unzip pr.zip -d tests-reports/
           cat tests-reports/pr.env >> "${GITHUB_ENV}"
 
-      - name: Install dotnet-sonarscanner
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
-
-      - name: Build the project and publish to SonarCloud
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: "https://sonarcloud.io"
           PROJECT_VERSION: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          git checkout -b teste
-          
-          set -eux -o pipefail
-
-          dotnet sonarscanner begin \
-              /k:"rafaelpadovezi_csharp-api-with-sonar" \
-              /o:"rafaelpadovezi" \
-              /d:sonar.login="$SONAR_TOKEN" \
-              /v:"$PROJECT_VERSION" \
-              /d:sonar.scm.revision="$PROJECT_VERSION" \
-              /d:sonar.host.url="https://sonarcloud.io" \
-              /d:sonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml" \
-              /d:sonar.cs.vstest.reportsPaths="**/*/*.trx" \
-              /d:sonar.pullrequest.base=main \
-              /d:sonar.pullrequest.branch=teste \
-              /d:sonar.pullrequest.key=$PR_NUMBER
-
-          dotnet build
-
-          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"
+        with:
+          projectBaseDir: app/src
+          args: >
+            -Dsonar.scm.revision="$PROJECT_VERSION"
+            -Dsonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml"
+            -Dsonar.cs.vstest.reportsPaths="**/*/*.trx"
+            -Dsonar.pullrequest.base=$PR_BASE_REF
+            -Dsonar.pullrequest.branch=$PR_HEAD_REF
+            -Dsonar.pullrequest.key=$PR_NUMBER

@@ -16,7 +16,7 @@ jobs:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
           ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
-      - name: 'Download artifacts'
+      - name: 'Download code coverage'
         uses: actions/github-script@v6
         with:
           script: |
@@ -42,17 +42,29 @@ jobs:
         run: |
           unzip pr.zip -d tests-reports/
           cat tests-reports/pr.env >> "${GITHUB_ENV}"
-
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
+      - name: Install dotnet-sonarscanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+      - name: Build the project and publish to SonarCloud
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: "https://sonarcloud.io"
-        with:
-          args: >
-            -Dsonar.scm.revision=${{ github.event.workflow_run.head_sha }}
-            -Dsonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml"
-            -Dsonar.cs.vstest.reportsPaths="**/*/*.trx"
-            -Dsonar.pullrequest.base=${{ env.PR_BASE_REF }}
-            -Dsonar.pullrequest.branch=${{ env.PR_HEAD_REF }}
-            -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
+          PROJECT_VERSION: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eux -o pipefail
+
+          git checkout -b teste
+
+          dotnet sonarscanner begin \
+              /k:"rafaelpadovezi_csharp-api-with-sonar" \
+              /o:"rafaelpadovezi" \
+              /d:sonar.login="$SONAR_TOKEN" \
+              /v:"$PROJECT_VERSION" \
+              /d:sonar.scm.revision="$PROJECT_VERSION" \
+              /d:sonar.host.url="https://sonarcloud.io" \
+              /d:sonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml" \
+              /d:sonar.cs.vstest.reportsPaths="**/*/*.trx" \
+              /d:sonar.pullrequest.base=main \
+              /d:sonar.pullrequest.branch=teste \
+              /d:sonar.pullrequest.key=$PR_NUMBER
+          dotnet build
+          dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"

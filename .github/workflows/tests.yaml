@@ -16,13 +16,11 @@ jobs:
         run: |
           set -eu -o pipefail
 
-          dotnet build -o pr/
-
           dotnet test \
             --logger trx \
             --logger "console;verbosity=detailed" \
             --settings "runsettings.xml" \
-            --results-directory pr/tests-results/
+            --results-directory pr/tests-results
       - name: Save PR information
         run: |
           echo "PR_NUMBER=${{ github.event.number }}" >> ./pr/pr.env

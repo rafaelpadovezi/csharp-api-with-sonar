@@ -42,20 +42,17 @@ jobs:
         run: |
           unzip pr.zip -d tests-reports/
           cat tests-reports/pr.env >> "${GITHUB_ENV}"
-
       - name: Install dotnet-sonarscanner
         run: |
           dotnet tool install --global dotnet-sonarscanner
-
       - name: Build the project and publish to SonarCloud
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PROJECT_VERSION: ${{ github.event.workflow_run.head_sha }}
         run: |
-          git checkout -b teste
-          
           set -eux -o pipefail
+
+          git checkout -b teste
 
           dotnet sonarscanner begin \
               /k:"rafaelpadovezi_csharp-api-with-sonar" \
@@ -69,7 +66,5 @@ jobs:
               /d:sonar.pullrequest.base=main \
               /d:sonar.pullrequest.branch=teste \
               /d:sonar.pullrequest.key=$PR_NUMBER
-
           dotnet build
-
           dotnet sonarscanner end /d:sonar.login="$SONAR_TOKEN"

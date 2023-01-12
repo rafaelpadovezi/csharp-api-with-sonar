@@ -53,6 +53,6 @@ jobs:
             -Dsonar.scm.revision=${{ github.event.workflow_run.head_sha }}
             -Dsonar.cs.opencover.reportsPaths="**/*/coverage.opencover.xml"
             -Dsonar.cs.vstest.reportsPaths="**/*/*.trx"
-            -Dsonar.pullrequest.base={{ env.PR_BASE_REF }}
-            -Dsonar.pullrequest.branch={{ env.PR_HEAD_REF }}
-            -Dsonar.pullrequest.key={{ env.PR_NUMBER }}
+            -Dsonar.pullrequest.base=${{ env.PR_BASE_REF }}
+            -Dsonar.pullrequest.branch=${{ env.PR_HEAD_REF }}
+            -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
